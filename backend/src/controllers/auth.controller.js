@@ -1,7 +1,6 @@
-import jwt from "jsonwebtoken";
 import User from "../models/model.user.js";
-import Agent from "../models/model.agent.js";
-import { JWT_SECRET, JWT_EXPIRE, ROLES } from "../constants.js";
+import Agent from "../models/agent.model.js";
+import { ROLES } from "../constants.js";
 import { generateToken } from "../utils/tokenGen.js";
 
 export const register = async (req, res) => {
