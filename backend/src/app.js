@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
-import { timeStamp } from "console";
+import authRoutes from "./routes/auth.route.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -35,6 +35,7 @@ app.get("/health", (req, res) => {
 });
 
 //Routes
+app.use("/api/auth", authRoutes);
 
 //Error handler
 app.use((err, req, res, next) => {
