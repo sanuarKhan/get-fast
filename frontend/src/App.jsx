@@ -4,6 +4,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import CustomerDashboard from "@/pages/CustomerDashboard";
+import BookParcel from "@/pages/BookParcel";
 import AgentDashboard from "@/pages/AgentDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 
@@ -16,16 +17,24 @@ function App() {
           <Route path="/register" element={<Register />} />
 
           <Route
-            path="/customer/*"
+            path="/customer"
             element={
               <ProtectedRoute roles={["customer"]}>
                 <CustomerDashboard />
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/customer/book"
+            element={
+              <ProtectedRoute roles={["customer"]}>
+                <BookParcel />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
-            path="/agent/*"
+            path="/agent"
             element={
               <ProtectedRoute roles={["agent"]}>
                 <AgentDashboard />
@@ -34,7 +43,7 @@ function App() {
           />
 
           <Route
-            path="/admin/*"
+            path="/admin"
             element={
               <ProtectedRoute roles={["admin"]}>
                 <AdminDashboard />

@@ -6,7 +6,6 @@ const parcelSchema = new mongoose.Schema(
     bookingId: {
       type: String,
       unique: true,
-      required: true,
     },
     customer: {
       type: mongoose.Schema.Types.ObjectId,
@@ -84,11 +83,10 @@ const parcelSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-parcelSchema.pre("save", function (next) {
+parcelSchema.pre("validate", function () {
   if (!this.bookingId) {
-    (this.bookingId = "BK"), Date.now() + Math.floor(Math.random() * 1000);
+    this.bookingId = `BK${Date.now()}${Math.floor(Math.random() * 1000)}`;
   }
-  next();
 });
 
 export default mongoose.model("Parcel", parcelSchema);
