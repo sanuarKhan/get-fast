@@ -4,6 +4,7 @@ import http from "http";
 import { Server } from "socket.io";
 import authRoutes from "./routes/auth.route.js";
 import parcelRoutes from "./routes/parcel.route.js";
+import adminRoutes from "./routes/admin.route.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -38,6 +39,7 @@ app.get("/health", (req, res) => {
 //Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/parcels", parcelRoutes);
+app.use("/api/admin", adminRoutes);
 
 //Error handler
 app.use((err, req, res, next) => {
