@@ -1,4 +1,4 @@
-import User from "../models/model.user.js";
+import User from "../models/user.model.js";
 import Agent from "../models/agent.model.js";
 import { ROLES } from "../constants.js";
 import { generateToken } from "../utils/tokenGen.js";
