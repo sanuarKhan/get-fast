@@ -2,5 +2,20 @@
   "dashboard": "Admin Dashboard",
   "book_parcel": "Book a Parcel",
   "status_picked": "Picked Up",
-  "status_transit": "In Transit"
+  "status_transit": "In Transit",
+  "book_parcel_title": "Book Parcel",
+  "pickup_address": "Pickup Address",
+  "delivery_address": "Delivery Address",
+  "parcel_details": "Parcel Details",
+  "street": "Street Address",
+  "city": "City",
+  "state": "State/Division",
+  "zip": "Zip Code",
+  "weight": "Weight (kg)",
+  "type": "Parcel Type",
+  "payment": "Payment Mode",
+  "amount": "Amount (BDT)",
+  "cancel": "Cancel",
+  "booking": "Booking...",
+  "success_msg": "Parcel booked successfully! Booking ID:"
 }

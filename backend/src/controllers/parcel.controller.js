@@ -326,7 +326,7 @@ export const updateAgentLocation = async (req, res) => {
     // Emit socket event
     const io = req.app.get("io");
     io.emit("agent:locationUpdate", {
-      agentId: req.user._id,
+      agentId: req.user._id.toString(),
       location: { lat, lng },
     });
 

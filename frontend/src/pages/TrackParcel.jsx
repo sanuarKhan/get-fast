@@ -23,6 +23,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import RecenterMap from "@/components/RecenterMap";
 
 // Fix default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -65,17 +66,17 @@ export default function TrackParcel() {
       });
 
       socket.on("agent:locationUpdate", (data) => {
-        if (data.agentId === parcel.agent?._id) {
+        if (parcel?.agent?._id && data.agentId === parcel.agent._id) {
+          console.log("New Location Received:", data.location);
           setAgentLocation(data.location);
         }
       });
-
       return () => {
         socket.off("parcel:statusUpdate");
         socket.off("agent:locationUpdate");
       };
     }
-  }, [socket, parcel, id]);
+  }, [socket, parcel?.agent?._id, id]);
 
   const fetchParcel = async () => {
     try {
@@ -296,6 +297,7 @@ export default function TrackParcel() {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://github.com/sanuarKhan">GetFastBySanuarkhan</a>'
                 />
+                <RecenterMap location={agentLocation} />
 
                 {/* Pickup Marker */}
                 <Marker
@@ -316,7 +318,7 @@ export default function TrackParcel() {
                 >
                   <Popup>Delivery Location</Popup>
                 </Marker>
-
+                {console.log(agentLocation, parcel)}
                 {/* Agent Location */}
                 {agentLocation && (
                   <Marker position={[agentLocation.lat, agentLocation.lng]}>
