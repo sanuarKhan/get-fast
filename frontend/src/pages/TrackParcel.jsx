@@ -2,18 +2,38 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "@/context/SocketContext";
 import api from "@/lib/api";
-import {
-  APIProvider,
-  Map,
-  Marker,
-  AdvancedMarker,
-  Pin,
-} from "@vis.gl/react-google-maps";
+// import {
+//   APIProvider,
+//   Map,
+//   Marker,
+//   AdvancedMarker,
+//   Pin,
+// } from "@vis.gl/react-google-maps";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MapPin, Package, Phone, User } from "lucide-react";
-import { Polyline } from "@/components/Polyline";
+// import { Polyline } from "@/components/Polyline";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix default marker icon
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -252,55 +272,51 @@ export default function TrackParcel() {
         <div className="lg:col-span-2">
           <Card className="h-150">
             <CardContent className="p-0 h-full">
-              <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_KEY}>
-                <Map
-                  defaultCenter={center}
-                  defaultZoom={12}
-                  gestureHandling="greedy"
-                  disableDefaultUI={false}
-                  mapId="5023b75ec09e11d959afbb85"
+              <MapContainer
+                center={[center.lat, center.lng]}
+                zoom={12}
+                style={{ height: "100%", width: "100%" }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://github.com/sanuarKhan">GetFastBySanuarkhan</a>'
+                />
+
+                {/* Pickup Marker */}
+                <Marker
+                  position={[
+                    parcel.pickupCoords?.lat || 23.8103,
+                    parcel.pickupCoords?.lng || 90.4125,
+                  ]}
                 >
-                  {/* Pickup Marker */}
-                  <AdvancedMarker
-                    position={{
-                      lat: parcel.pickupCoords?.lat || 23.8103,
-                      lng: parcel.pickupCoords?.lng || 90.4125,
-                    }}
-                    title="Pickup Location"
-                  >
-                    <Pin className="h-5 w-5 text-green-600" />
-                  </AdvancedMarker>
+                  <Popup>Pickup Location</Popup>
+                </Marker>
 
-                  {/* Delivery Marker */}
-                  <AdvancedMarker
-                    position={{
-                      lat: parcel.deliveryCoords?.lat || 23.8103,
-                      lng: parcel.deliveryCoords?.lng || 90.4125,
-                    }}
-                    title="Delivery Location"
-                  >
-                    <Pin className="h-5 w-5 text-red-600" />
-                  </AdvancedMarker>
+                {/* Delivery Marker */}
+                <Marker
+                  position={[
+                    parcel.deliveryCoords?.lat || 23.8103,
+                    parcel.deliveryCoords?.lng || 90.4125,
+                  ]}
+                >
+                  <Popup>Delivery Location</Popup>
+                </Marker>
 
-                  {/* Agent Location (if available) */}
-                  {agentLocation && (
-                    <AdvancedMarker
-                      position={agentLocation}
-                      title="Agent Location"
-                    >
-                      <Pin className="h-5 w-5 text-blue-600" />
-                    </AdvancedMarker>
-                  )}
+                {/* Agent Location */}
+                {agentLocation && (
+                  <Marker position={[agentLocation.lat, agentLocation.lng]}>
+                    <Popup>Agent Current Location</Popup>
+                  </Marker>
+                )}
 
-                  {/* Route Line */}
-                  <Polyline
-                    path={path}
-                    strokeColor="#2563e"
-                    strokeWeight={3}
-                    strokeOpacity={0.7}
-                  />
-                </Map>
-              </APIProvider>
+                {/* Route Line */}
+                <Polyline
+                  positions={path.map((p) => [p.lat, p.lng])}
+                  color="#2563eb"
+                  weight={3}
+                  opacity={0.7}
+                />
+              </MapContainer>
             </CardContent>
           </Card>
         </div>
