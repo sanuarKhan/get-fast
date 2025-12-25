@@ -23,6 +23,12 @@ app.use(express.urlencoded({ extended: true }));
 // Socket.io
 io.on("connection", (socket) => {
   console.log("Clientconnected:", socket.id);
+
+  const userId = socket.handshake.auth.userId;
+  if (userId) {
+    socket.join(`user:${userId}`);
+    console.log(`User ${userId} joined their room`);
+  }
   socket.on("disconnect", () => {
     console.log("Client disconnected", socket.id);
   });

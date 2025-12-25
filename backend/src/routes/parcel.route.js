@@ -15,36 +15,36 @@ import { ROLES } from "../constants.js";
 
 const router = express.Router();
 
-// Customer routes
-router.post("/book", protect, restrictTo(ROLES.CUSTOMER), bookParcel);
-router.get("/my-bookings", protect, restrictTo(ROLES.CUSTOMER), getMyBookings);
-
-// Shared routes
-router.get("/:id", protect, getParcel);
-
-// Admin routes
-router.get("/", protect, restrictTo(ROLES.ADMIN), getAllParcels);
-router.put("/:id/assign", protect, restrictTo(ROLES.ADMIN), assignAgent);
+// Specific routes FIRST
 router.get(
   "/stats/dashboard",
   protect,
   restrictTo(ROLES.ADMIN),
   getDashboardStats
 );
-
-// Agent routes
+router.get("/my-bookings", protect, restrictTo(ROLES.CUSTOMER), getMyBookings);
 router.get(
   "/agent/assigned",
   protect,
   restrictTo(ROLES.AGENT),
   getAssignedParcels
 );
-router.put("/:id/status", protect, restrictTo(ROLES.AGENT), updateParcelStatus);
+router.post("/book", protect, restrictTo(ROLES.CUSTOMER), bookParcel);
 router.patch(
   "/agent/location",
   protect,
   restrictTo(ROLES.AGENT),
   updateAgentLocation
 );
+
+// Admin routes
+router.get("/", protect, restrictTo(ROLES.ADMIN), getAllParcels);
+router.put("/:id/assign", protect, restrictTo(ROLES.ADMIN), assignAgent);
+
+// Agent routes
+router.put("/:id/status", protect, restrictTo(ROLES.AGENT), updateParcelStatus);
+
+// Shared routes - LAST
+router.get("/:id", protect, getParcel);
 
 export default router;

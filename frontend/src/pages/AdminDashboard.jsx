@@ -14,6 +14,9 @@ import {
   CheckCircle,
 } from "lucide-react";
 
+import { useSocket } from "@/context/SocketContext";
+import { toast } from "sonner";
+
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
   Assigned: "bg-blue-100 text-blue-800",
@@ -30,10 +33,29 @@ export default function AdminDashboard() {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedParcel, setSelectedParcel] = useState(null);
+  const { socket } = useSocket();
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("parcel:new", () => {
+        toast.info("New parcel booked!");
+        fetchData();
+      });
+
+      socket.on("parcel:statusUpdate", () => {
+        fetchData();
+      });
+
+      return () => {
+        socket.off("parcel:new");
+        socket.off("parcel:statusUpdate");
+      };
+    }
+  }, [socket]);
 
   const fetchData = async () => {
     try {
@@ -41,11 +63,14 @@ export default function AdminDashboard() {
         api.get("/api/parcels/stats/dashboard"),
         api.get("/api/parcels"),
         api.get("/api/admin/users"),
-      ]); //ss:e
+      ]);
 
       setStats(statsRes.data.stats);
       setParcels(parcelsRes.data.parcels);
-      setAgents(usersRes.data.users.filter((u) => u.role === "agent"));
+
+      // Filter only agents
+      const agentUsers = usersRes.data.users.filter((u) => u.role === "agent");
+      setAgents(agentUsers);
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
@@ -177,6 +202,7 @@ export default function AdminDashboard() {
                 <div className="space-y-4">
                   {parcels.map((parcel) => (
                     <div key={parcel._id} className="border rounded-lg p-4">
+                      {console.log(parcel)}
                       <div className="flex items-start justify-between">
                         <div className="space-y-2 flex-1">
                           <div className="flex items-center gap-3">
@@ -207,17 +233,20 @@ export default function AdminDashboard() {
                         </div>
 
                         {parcel.status === "Pending" && (
-                          <div className="space-y-2">
+                          <div className="ml-4">
                             {selectedParcel === parcel._id ? (
-                              <div className="flex flex-col gap-2">
+                              <div className="flex flex-col gap-2 min-w-50">
                                 <select
                                   className="border rounded px-3 py-2 text-sm"
-                                  onChange={(e) =>
-                                    handleAssignAgent(
-                                      parcel._id,
-                                      e.target.value
-                                    )
-                                  }
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      handleAssignAgent(
+                                        parcel._id,
+                                        e.target.value
+                                      );
+                                    }
+                                  }}
+                                  defaultValue=""
                                 >
                                   <option value="">Select Agent</option>
                                   {agents.map((agent) => (

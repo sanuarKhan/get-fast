@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useSocket } from "@/context/SocketContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "@/lib/api";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Package, Plus, MapPin } from "lucide-react";
 
@@ -18,6 +20,7 @@ const statusColors = {
 
 export default function CustomerDashboard() {
   const { user, logout } = useAuth();
+  const { socket } = useSocket();
   const navigate = useNavigate();
   const location = useLocation();
   const [parcels, setParcels] = useState([]);
@@ -27,10 +30,34 @@ export default function CustomerDashboard() {
   useEffect(() => {
     if (location.state?.message) {
       setMessage(location.state.message);
+      toast.success(location.state.message);
       setTimeout(() => setMessage(""), 5000);
     }
     fetchParcels();
   }, [location]);
+
+  useEffect(() => {
+    if (socket) {
+      // Listen for status updates
+      socket.on("parcel:statusUpdate", (data) => {
+        if (data.customerId === user.id) {
+          toast.info(`Parcel status updated to: ${data.status}`);
+          fetchParcels();
+        }
+      });
+
+      // Listen for assignment
+      socket.on("parcel:assigned", (data) => {
+        toast.info("Agent assigned to your parcel!");
+        fetchParcels();
+      });
+
+      return () => {
+        socket.off("parcel:statusUpdate");
+        socket.off("parcel:assigned");
+      };
+    }
+  }, [socket, user]);
 
   const fetchParcels = async () => {
     try {
@@ -58,12 +85,6 @@ export default function CustomerDashboard() {
       </nav>
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {message && (
-          <div className="p-4 bg-green-50 text-green-800 rounded-md">
-            {message}
-          </div>
-        )}
-
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">My Bookings</h2>
           <Button onClick={() => navigate("/customer/book")}>

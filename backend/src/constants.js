@@ -15,12 +15,12 @@ export const ROLES = {
 };
 
 export const PARCEL_STATUS = {
-  PENDING: "pending",
-  ASSIGNED: "assigned",
-  PICKED_UP: "pickedUp",
+  PENDING: "Pending",
+  ASSIGNED: "Assigned",
+  PICKED_UP: "PickedUp",
   IN_TRANSIT: "InTransit",
-  DELIVERED: "delivered",
-  FAILED: "failed",
+  DELIVERED: "Delivered",
+  FAILED: "Failed",
 };
 
 export const PAYMENT_MODE = {

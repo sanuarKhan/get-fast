@@ -283,12 +283,16 @@ export const updateParcelStatus = async (req, res) => {
 // Agent: Update location
 export const updateAgentLocation = async (req, res) => {
   try {
-    const { lat, lng } = req.body;
+    const { lat, lng, parcelId } = req.body;
 
     await Agent.findOneAndUpdate(
       { user: req.user._id },
       { currentLocation: { lat, lng } }
     );
+
+    if (parcelId) {
+      await Parcel.findOneAndUpdate({ currentLocation: { lat, lng } });
+    }
 
     // Emit socket event
     const io = req.app.get("io");
