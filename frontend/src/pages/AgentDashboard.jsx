@@ -6,7 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Package, MapPin, CheckCircle, XCircle, Truck } from "lucide-react";
+import {
+  Package,
+  MapPin,
+  CheckCircle,
+  XCircle,
+  Truck,
+  Camera,
+} from "lucide-react";
+import useNavigate from "react-router-dom";
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -25,6 +33,8 @@ export default function AgentDashboard() {
   const [newStatus, setNewStatus] = useState("");
   const [failureReason, setFailureReason] = useState("");
   const [updating, setUpdating] = useState(false);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchParcels();
@@ -104,6 +114,19 @@ export default function AgentDashboard() {
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Assigned Parcels</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Assigned Parcels</h2>
+            <div className="flex items-center gap-4">
+              <Button onClick={() => navigate("/agent/scan")}>
+                <Camera className="h-4 w-4 mr-2" />
+                Scan QR
+              </Button>
+              <div className="flex items-center gap-2">
+                <Truck className="h-5 w-5 text-slate-600" />
+                <span className="font-semibold">{parcels.length} Active</span>
+              </div>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <Truck className="h-5 w-5 text-slate-600" />
             <span className="font-semibold">{parcels.length} Active</span>

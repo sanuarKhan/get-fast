@@ -183,7 +183,6 @@ export default function TrackParcel() {
               </div>
             </CardContent>
           </Card>
-
           {/* Addresses */}
           <Card>
             <CardHeader>
@@ -216,7 +215,6 @@ export default function TrackParcel() {
               </div>
             </CardContent>
           </Card>
-
           {/* Agent Info */}
           {parcel.agent && (
             <Card>
@@ -235,7 +233,24 @@ export default function TrackParcel() {
               </CardContent>
             </Card>
           )}
-
+          {/* QR Code */}
+          {parcel.qrCode && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">QR Code</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center">
+                <img
+                  src={parcel.qrCode}
+                  alt="Parcel QR Code"
+                  className="w-48 h-48"
+                />
+                <p className="text-sm text-slate-600 mt-2">
+                  Scan for quick tracking
+                </p>
+              </CardContent>
+            </Card>
+          )}
           {/* Status Timeline */}
           <Card>
             <CardHeader>

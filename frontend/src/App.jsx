@@ -9,7 +9,7 @@ import BookParcel from "@/pages/BookParcel";
 import AgentDashboard from "@/pages/AgentDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import { Toaster } from "@/components/ui/sonner";
-
+import ScanQR from "@/pages/ScanQR";
 import TrackParcel from "@/pages/TrackParcel";
 function App() {
   return (
@@ -61,6 +61,14 @@ function App() {
               element={
                 <ProtectedRoute roles={["customer"]}>
                   <TrackParcel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/agent/scan"
+              element={
+                <ProtectedRoute roles={["agent"]}>
+                  <ScanQR />
                 </ProtectedRoute>
               }
             />

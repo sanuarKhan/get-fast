@@ -1,6 +1,7 @@
 import Parcel from "../models/parcel.model.js";
 import Agent from "../models/agent.model.js";
 import { PARCEL_STATUS, ROLES } from "../constants.js";
+import { generateQRCode } from "../utils/qrCode.js";
 
 //Customer: Book a parcel
 
@@ -37,9 +38,14 @@ export const bookParcel = async (req, res) => {
       ],
     });
 
-    //Emit socket event
+    // Generate QR Code with booking ID
+    const qrCode = await generateQRCode(parcel.bookingId);
+    parcel.qrCode = qrCode;
+    await parcel.save();
+
+    // Emit socket event
     const io = req.app.get("io");
-    io.emit("parcelBooked", parcel);
+    io.emit("parcel:new", parcel);
 
     res.json({ success: true, parcel });
   } catch (error) {
