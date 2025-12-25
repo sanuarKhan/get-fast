@@ -5,12 +5,15 @@ import { Server } from "socket.io";
 import authRoutes from "./routes/auth.route.js";
 import parcelRoutes from "./routes/parcel.route.js";
 import adminRoutes from "./routes/admin.route.js";
+const isProduction = process.env.NODE_ENV === "production";
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "https://get-fast.pages.dev" || "http://localhost:5173",
+    origin: isProduction
+      ? "https://get-fast.pages.dev"
+      : "http://localhost:5173",
     credentials: true,
   },
 });
