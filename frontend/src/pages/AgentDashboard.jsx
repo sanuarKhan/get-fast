@@ -39,6 +39,16 @@ export default function AgentDashboard() {
   useEffect(() => {
     fetchParcels();
   }, []);
+  const updateTestLocation = async () => {
+    try {
+      await api.patch("/api/parcels/agent/location", {
+        lat: 23.8103 + (Math.random() - 0.5) * 0.01,
+        lng: 90.4125 + (Math.random() - 0.5) * 0.01,
+      });
+    } catch (error) {
+      console.error("Failed to update location");
+    }
+  };
 
   const fetchParcels = async () => {
     try {
@@ -272,6 +282,10 @@ export default function AgentDashboard() {
             ))}
           </div>
         )}
+
+        <Button size="sm" onClick={updateTestLocation}>
+          Update Location (Test)
+        </Button>
       </div>
     </div>
   );

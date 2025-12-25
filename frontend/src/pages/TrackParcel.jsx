@@ -2,18 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "@/context/SocketContext";
 import api from "@/lib/api";
-// import {
-//   APIProvider,
-//   Map,
-//   Marker,
-//   AdvancedMarker,
-//   Pin,
-// } from "@vis.gl/react-google-maps";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MapPin, Package, Phone, User } from "lucide-react";
-// import { Polyline } from "@/components/Polyline";
 import {
   MapContainer,
   TileLayer,
@@ -23,9 +11,12 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import RecenterMap from "@/components/RecenterMap";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, MapPin, Phone, User } from "lucide-react";
 
-// Fix default marker icon
+// Fix Leaflet default marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -34,6 +25,40 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
   shadowUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
+
+// Custom marker icons
+const pickupIcon = new L.Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const deliveryIcon = new L.Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const agentIcon = new L.Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
 });
 
 const statusColors = {
@@ -66,22 +91,24 @@ export default function TrackParcel() {
       });
 
       socket.on("agent:locationUpdate", (data) => {
-        if (parcel?.agent?._id && data.agentId === parcel.agent._id) {
-          console.log("New Location Received:", data.location);
+        if (parcel.agent && data.agentId === parcel.agent._id) {
           setAgentLocation(data.location);
         }
       });
+
       return () => {
         socket.off("parcel:statusUpdate");
         socket.off("agent:locationUpdate");
       };
     }
-  }, [socket, parcel?.agent?._id, id]);
+  }, [socket, parcel, id]);
 
   const fetchParcel = async () => {
     try {
       const response = await api.get(`/api/parcels/${id}`);
       setParcel(response.data.parcel);
+
+      // Set initial agent location if available
       if (response.data.parcel.currentLocation) {
         setAgentLocation(response.data.parcel.currentLocation);
       }
@@ -111,20 +138,16 @@ export default function TrackParcel() {
     );
   }
 
-  const center = {
-    lat: parcel.pickupCoords?.lat || 23.8103,
-    lng: parcel.pickupCoords?.lng || 90.4125,
+  // Calculate map center - use agent location if available, otherwise midpoint
+  const center = agentLocation || {
+    lat: (parcel.pickupCoords.lat + parcel.deliveryCoords.lat) / 2,
+    lng: (parcel.pickupCoords.lng + parcel.deliveryCoords.lng) / 2,
   };
 
-  const path = [
-    {
-      lat: parcel.pickupCoords?.lat || 23.8103,
-      lng: parcel.pickupCoords?.lng || 90.4125,
-    },
-    {
-      lat: parcel.deliveryCoords?.lat || 23.8103,
-      lng: parcel.deliveryCoords?.lng || 90.4125,
-    },
+  // Polyline path - pickup to delivery
+  const routePath = [
+    [parcel.pickupCoords.lat, parcel.pickupCoords.lng],
+    [parcel.deliveryCoords.lat, parcel.deliveryCoords.lng],
   ];
 
   return (
@@ -143,7 +166,7 @@ export default function TrackParcel() {
       </nav>
 
       <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Parcel Details */}
+        {/* Left Sidebar - Parcel Details */}
         <div className="lg:col-span-1 space-y-4">
           <Card>
             <CardHeader>
@@ -184,7 +207,7 @@ export default function TrackParcel() {
               </div>
             </CardContent>
           </Card>
-          {/* Addresses */}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Addresses</CardTitle>
@@ -192,10 +215,10 @@ export default function TrackParcel() {
             <CardContent className="space-y-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <MapPin className="h-4 w-4 text-green-600" />
+                  <div className="w-3 h-3 bg-green-500 rounded-full" />
                   <p className="text-sm font-medium">Pickup</p>
                 </div>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-600 ml-5">
                   {parcel.pickupAddress.street}, {parcel.pickupAddress.city}
                   <br />
                   {parcel.pickupAddress.state} - {parcel.pickupAddress.zipCode}
@@ -204,10 +227,10 @@ export default function TrackParcel() {
 
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <MapPin className="h-4 w-4 text-red-600" />
+                  <div className="w-3 h-3 bg-red-500 rounded-full" />
                   <p className="text-sm font-medium">Delivery</p>
                 </div>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-600 ml-5">
                   {parcel.deliveryAddress.street}, {parcel.deliveryAddress.city}
                   <br />
                   {parcel.deliveryAddress.state} -{" "}
@@ -216,7 +239,7 @@ export default function TrackParcel() {
               </div>
             </CardContent>
           </Card>
-          {/* Agent Info */}
+
           {parcel.agent && (
             <Card>
               <CardHeader>
@@ -234,7 +257,7 @@ export default function TrackParcel() {
               </CardContent>
             </Card>
           )}
-          {/* QR Code */}
+
           {parcel.qrCode && (
             <Card>
               <CardHeader>
@@ -252,7 +275,7 @@ export default function TrackParcel() {
               </CardContent>
             </Card>
           )}
-          {/* Status Timeline */}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Status History</CardTitle>
@@ -286,52 +309,68 @@ export default function TrackParcel() {
 
         {/* Map */}
         <div className="lg:col-span-2">
-          <Card className="h-150">
+          <Card className="h-[700px]">
             <CardContent className="p-0 h-full">
               <MapContainer
                 center={[center.lat, center.lng]}
-                zoom={12}
-                style={{ height: "100%", width: "100%" }}
+                zoom={13}
+                style={{ height: "100%", width: "100%", borderRadius: "8px" }}
               >
                 <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://github.com/sanuarKhan">GetFastBySanuarkhan</a>'
                 />
-                <RecenterMap location={agentLocation} />
 
-                {/* Pickup Marker */}
+                {/* Pickup Marker - Green */}
                 <Marker
-                  position={[
-                    parcel.pickupCoords?.lat || 23.8103,
-                    parcel.pickupCoords?.lng || 90.4125,
-                  ]}
+                  position={[parcel.pickupCoords.lat, parcel.pickupCoords.lng]}
+                  icon={pickupIcon}
                 >
-                  <Popup>Pickup Location</Popup>
+                  <Popup>
+                    <strong>Pickup Location</strong>
+                    <br />
+                    {parcel.pickupAddress.city}
+                  </Popup>
                 </Marker>
 
-                {/* Delivery Marker */}
+                {/* Delivery Marker - Red */}
                 <Marker
                   position={[
-                    parcel.deliveryCoords?.lat || 23.8103,
-                    parcel.deliveryCoords?.lng || 90.4125,
+                    parcel.deliveryCoords.lat,
+                    parcel.deliveryCoords.lng,
                   ]}
+                  icon={deliveryIcon}
                 >
-                  <Popup>Delivery Location</Popup>
+                  <Popup>
+                    <strong>Delivery Location</strong>
+                    <br />
+                    {parcel.deliveryAddress.city}
+                  </Popup>
                 </Marker>
-                {console.log(agentLocation, parcel)}
-                {/* Agent Location */}
+
+                {/* Agent Location - Blue (real-time) */}
                 {agentLocation && (
-                  <Marker position={[agentLocation.lat, agentLocation.lng]}>
-                    <Popup>Agent Current Location</Popup>
+                  <Marker
+                    position={[agentLocation.lat, agentLocation.lng]}
+                    icon={agentIcon}
+                  >
+                    <Popup>
+                      <strong>Agent Current Location</strong>
+                      <br />
+                      {parcel.agent?.name}
+                    </Popup>
                   </Marker>
                 )}
 
-                {/* Route Line */}
+                {/* Route Polyline */}
                 <Polyline
-                  positions={path.map((p) => [p.lat, p.lng])}
-                  color="#2563eb"
-                  weight={3}
-                  opacity={0.7}
+                  positions={routePath}
+                  pathOptions={{
+                    color: "#2563eb",
+                    weight: 3,
+                    opacity: 0.7,
+                    dashArray: "10, 10",
+                  }}
                 />
               </MapContainer>
             </CardContent>
