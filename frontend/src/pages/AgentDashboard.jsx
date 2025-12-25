@@ -14,7 +14,7 @@ import {
   Truck,
   Camera,
 } from "lucide-react";
-import useNavigate from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",

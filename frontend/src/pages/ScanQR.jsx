@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { QrReader } from "react-qr-scanner";
+import { QrReader } from "react-qr-reader";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +12,11 @@ export default function ScanQR() {
   const [scanning, setScanning] = useState(true);
   const [parcel, setParcel] = useState(null);
 
-  const handleScan = async (result) => {
+  const handleScan = async (result, error) => {
     if (result?.text && scanning) {
       setScanning(false);
 
       try {
-        // Search for parcel by booking ID
         const response = await api.get(`/api/parcels?search=${result.text}`);
 
         if (response.data.parcels?.length > 0) {
@@ -28,17 +27,16 @@ export default function ScanQR() {
           toast.error("Parcel not found");
           setScanning(true);
         }
-      } catch (error) {
-        console.error("Error scanning QR:", error);
+      } catch (err) {
+        console.error("Error scanning QR:", err);
         toast.error("Failed to scan QR code");
         setScanning(true);
       }
     }
-  };
 
-  const handleError = (error) => {
-    console.error("QR Scanner error:", error);
-    toast.error("Camera access denied or error occurred");
+    if (error) {
+      console.error("QR Scanner error:", error);
+    }
   };
 
   const confirmPickup = async () => {
@@ -74,15 +72,11 @@ export default function ScanQR() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-black rounded-lg overflow-hidden">
+              <div className="rounded-lg overflow-hidden">
                 <QrReader
-                  delay={300}
-                  onError={handleError}
-                  onScan={handleScan}
-                  style={{ width: "100%" }}
-                  constraints={{
-                    video: { facingMode: "environment" },
-                  }}
+                  onResult={handleScan}
+                  constraints={{ facingMode: "environment" }}
+                  containerStyle={{ width: "100%" }}
                 />
               </div>
               <p className="text-sm text-slate-600 text-center mt-4">
