@@ -2,6 +2,12 @@ import Parcel from "../models/parcel.model.js";
 import Agent from "../models/agent.model.js";
 import { PARCEL_STATUS, ROLES } from "../constants.js";
 import { generateQRCode } from "../utils/qrCode.js";
+import {
+  sendBookingConfirmation,
+  sendStatusUpdate,
+  sendDeliveryConfirmation,
+} from "../utils/emailService.js";
+import User from "../models/user.model.js";
 
 //Customer: Book a parcel
 
@@ -42,6 +48,10 @@ export const bookParcel = async (req, res) => {
     const qrCode = await generateQRCode(parcel.bookingId);
     parcel.qrCode = qrCode;
     await parcel.save();
+
+    // Send confirmation email
+    const customer = await User.findById(req.user._id);
+    await sendBookingConfirmation(parcel, customer);
 
     // Emit socket event
     const io = req.app.get("io");
@@ -181,6 +191,10 @@ export const assignAgent = async (req, res) => {
       $push: { assignedParcels: parcelId },
     });
 
+    // Send email notification
+    const customer = await User.findById(parcel.customer);
+    await sendStatusUpdate(parcel, customer, PARCEL_STATUS.ASSIGNED);
+
     // Emit socket event
     const io = req.app.get("io");
     io.emit("parcel:assigned", { parcelId, agentId });
@@ -271,6 +285,15 @@ export const updateParcelStatus = async (req, res) => {
     const updatedParcel = await Parcel.findByIdAndUpdate(parcelId, updateData, {
       new: true,
     }).populate("customer", "name phone email");
+
+    // Send email based on status
+    const customer = updatedParcel.customer;
+
+    if (status === PARCEL_STATUS.DELIVERED) {
+      await sendDeliveryConfirmation(updatedParcel, customer);
+    } else {
+      await sendStatusUpdate(updatedParcel, customer, status);
+    }
 
     // Emit socket event
     const io = req.app.get("io");
