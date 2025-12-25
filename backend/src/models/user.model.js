@@ -31,6 +31,11 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(ROLES),
       default: ROLES.CUSTOMER,
     },
+    preferredLanguage: {
+      type: String,
+      enum: ["en", "bn"],
+      default: "en",
+    },
     isActive: {
       type: Boolean,
       default: true,

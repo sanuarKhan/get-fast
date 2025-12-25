@@ -27,6 +27,13 @@ export const PARCEL_STATUS = {
   DELIVERED: "Delivered",
   FAILED: "Failed",
 };
+export const PARCEL_STATUS_BN = {
+  Pending: "পেন্ডিং (অপেক্ষমান)",
+  "Picked Up": "সংগ্রহ করা হয়েছে",
+  "In Transit": "পথে আছে",
+  Delivered: "পৌঁছে দেওয়া হয়েছে",
+  Failed: "ব্যর্থ হয়েছে",
+};
 
 export const PAYMENT_MODE = {
   COD: "COD",

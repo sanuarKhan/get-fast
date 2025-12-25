@@ -72,6 +72,7 @@ const parcelSchema = new mongoose.Schema(
     qrCode: String,
     deliveryDate: Date,
     failureReason: String,
+    failureReasonBn: String,
     statusHistory: [
       {
         status: String,

@@ -1,0 +1,36 @@
+{
+  "common": {
+    "dashboard": "ড্যাশবোর্ড",
+    "admin_dashboard": "অ্যাডমিন ড্যাশবোর্ড",
+    "book_parcel": "পার্সেল বুক করুন",
+    "amount": "পরিমাণ",
+    "weight": "ওজন",
+    "phone": "ফোন নম্বর"
+  },
+  "status": {
+    "Pending": "পেন্ডিং (অপেক্ষমান)",
+    "Picked Up": "সংগ্রহ করা হয়েছে",
+    "In Transit": "পথে আছে",
+    "Delivered": "পৌঁছে দেওয়া হয়েছে",
+    "Failed": "ব্যর্থ হয়েছে"
+  },
+  "parcelSize": {
+    "Small": "ছোট",
+    "Medium": "মাঝারি",
+    "Large": "বড়",
+    "Extra Large": "অতিরিক্ত বড়"
+  },
+  "paymentMode": {
+    "COD": "ক্যাশ অন ডেলিভারি (COD)",
+    "Prepaid": "প্রিপেইড"
+  },
+  "labels": {
+    "bookingId": "বুকিং আইডি",
+    "pickupAddress": "পিকআপ ঠিকানা",
+    "deliveryAddress": "ডেলিভারি ঠিকানা",
+    "parcelType": "পার্সেল টাইপ",
+    "street": "রাস্তা/সড়ক",
+    "city": "শহর",
+    "zipCode": "জিপ কোড"
+  }
+}
