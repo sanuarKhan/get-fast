@@ -366,9 +366,9 @@ export default function TrackParcel() {
                 <Polyline
                   positions={routePath}
                   pathOptions={{
-                    color: "#2563eb",
-                    weight: 3,
-                    opacity: 0.7,
+                    color: "#0011dd",
+                    weight: 5,
+                    opacity: 1,
                     dashArray: "10, 10",
                   }}
                 />
