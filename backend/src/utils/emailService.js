@@ -4,6 +4,7 @@ import {
   EMAIL_PORT,
   EMAIL_USER,
   EMAIL_PASSWORD,
+  EMAIL_FROM,
 } from "../constants.js";
 
 const transporter = nodemailer.createTransport({
