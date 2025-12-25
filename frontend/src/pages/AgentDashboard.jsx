@@ -6,14 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Package,
-  MapPin,
-  CheckCircle,
-  XCircle,
-  Truck,
-  Camera,
-} from "lucide-react";
+import { Package, MapPin, XCircle, Truck, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const statusColors = {
@@ -39,16 +32,16 @@ export default function AgentDashboard() {
   useEffect(() => {
     fetchParcels();
   }, []);
-  const updateTestLocation = async () => {
-    try {
-      await api.patch("/api/parcels/agent/location", {
-        lat: 23.8103 + (Math.random() - 0.9) * 0.2,
-        lng: 90.4125 + (Math.random() - 0.9) * 0.2,
-      });
-    } catch (error) {
-      console.error("Failed to update location");
-    }
-  };
+  // const updateTestLocation = async () => {
+  //   try {
+  //     await api.patch("/api/parcels/agent/location", {
+  //       lat: 23.8103 + (Math.random() - 0.9) * 0.2,
+  //       lng: 90.4125 + (Math.random() - 0.9) * 0.2,
+  //     });
+  //   } catch (error) {
+  //     console.error("Failed to update location");
+  //   }
+  // };
 
   const fetchParcels = async () => {
     try {
@@ -125,7 +118,6 @@ export default function AgentDashboard() {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Assigned Parcels</h2>
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Assigned Parcels</h2>
             <div className="flex items-center gap-4">
               <Button onClick={() => navigate("/agent/scan")}>
                 <Camera className="h-4 w-4 mr-2" />
@@ -282,10 +274,9 @@ export default function AgentDashboard() {
             ))}
           </div>
         )}
-
-        <Button size="sm" onClick={updateTestLocation}>
+        {/* <Button size="sm" onClick={updateTestLocation}>
           Update Location (Test)
-        </Button>
+        </Button> */}
       </div>
     </div>
   );
