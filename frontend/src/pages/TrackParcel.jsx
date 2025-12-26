@@ -1,382 +1,286 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useSocket } from "@/context/SocketContext";
-import api from "@/lib/api";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  Polyline,
-} from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MapPin, Phone, User } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import axios from "axios";
+import { io } from "socket.io-client";
+import TrackingMap from "../components/TrackingMap";
+import AgentLocationUpdater from "../components/AgentLocationUpdater";
 
-// Fix Leaflet default marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
-
-// Custom marker icons
-const pickupIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const deliveryIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const agentIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const statusColors = {
-  Pending: "bg-yellow-100 text-yellow-800",
-  Assigned: "bg-blue-100 text-blue-800",
-  PickedUp: "bg-purple-100 text-purple-800",
-  InTransit: "bg-orange-100 text-orange-800",
-  Delivered: "bg-green-100 text-green-800",
-  Failed: "bg-red-100 text-red-800",
-};
-
-export default function TrackParcel() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { socket } = useSocket();
+const TrackingPage = () => {
+  const { parcelId } = useParams();
   const [parcel, setParcel] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [agentLocation, setAgentLocation] = useState(null);
+  const [socket, setSocket] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAgent = user.role === "agent";
 
   useEffect(() => {
-    fetchParcel();
-  }, [id]);
+    // Initialize Socket.IO
+    const newSocket = io(import.meta.env.VITE_API_URL, {
+      auth: {
+        token: localStorage.getItem("token"),
+      },
+    });
+
+    setSocket(newSocket);
+
+    // Cleanup on unmount
+    return () => {
+      newSocket.close();
+    };
+  }, []);
 
   useEffect(() => {
-    if (socket && parcel) {
-      socket.on("parcel:statusUpdate", (data) => {
-        if (data.parcelId === id) {
-          fetchParcel();
-        }
-      });
+    fetchParcelDetails();
+    fetchAgentLocation();
+  }, [parcelId]);
 
-      socket.on("agent:locationUpdate", (data) => {
-        if (parcel.agent && data.agentId === parcel.agent._id) {
-          setAgentLocation(data.location);
-        }
-      });
-
-      return () => {
-        socket.off("parcel:statusUpdate");
-        socket.off("agent:locationUpdate");
-      };
-    }
-  }, [socket, parcel, id]);
-
-  const fetchParcel = async () => {
+  const fetchParcelDetails = async () => {
     try {
-      const response = await api.get(`/api/parcels/${id}`);
-      setParcel(response.data.parcel);
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/parcels/${parcelId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      // Set initial agent location if available
-      if (response.data.parcel.currentLocation) {
-        setAgentLocation(response.data.parcel.currentLocation);
-      }
-    } catch (error) {
-      console.error("Failed to fetch parcel:", error);
+      setParcel(response.data.data);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to fetch parcel details");
+      console.error("Error fetching parcel:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAgentLocation = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/parcels/${parcelId}/agent-location`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.data) {
+        setAgentLocation(response.data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching agent location:", err);
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        Loading...
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading parcel details...</p>
+        </div>
       </div>
     );
   }
 
-  if (!parcel) {
+  if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-lg mb-4">Parcel not found</p>
-          <Button onClick={() => navigate("/customer")}>Go Back</Button>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <h2 className="text-red-800 font-semibold text-lg mb-2">Error</h2>
+          <p className="text-red-600">{error}</p>
         </div>
       </div>
     );
   }
 
-  // Calculate map center - use agent location if available, otherwise midpoint
-  const center = agentLocation || {
-    lat: (parcel.pickupCoords.lat + parcel.deliveryCoords.lat) / 2,
-    lng: (parcel.pickupCoords.lng + parcel.deliveryCoords.lng) / 2,
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: "bg-yellow-100 text-yellow-800",
+      assigned: "bg-blue-100 text-blue-800",
+      picked_up: "bg-purple-100 text-purple-800",
+      in_transit: "bg-indigo-100 text-indigo-800",
+      out_for_delivery: "bg-orange-100 text-orange-800",
+      delivered: "bg-green-100 text-green-800",
+      failed: "bg-red-100 text-red-800",
+      cancelled: "bg-gray-100 text-gray-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
-  // Polyline path - pickup to delivery
-  const routePath = [
-    [parcel.pickupCoords.lat, parcel.pickupCoords.lng],
-    [parcel.deliveryCoords.lat, parcel.deliveryCoords.lng],
-  ];
+  const formatStatus = (status) => {
+    return status
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white border-b px-4 py-3">
-        <div className="flex items-center gap-4 max-w-7xl mx-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/customer")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-xl font-bold">Track Parcel</h1>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Sidebar - Parcel Details */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Parcel Details</CardTitle>
-                <Badge className={statusColors[parcel.status]}>
-                  {parcel.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-slate-600">Booking ID</p>
-                <p className="font-semibold">{parcel.bookingId}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-600">Parcel Type</p>
-                <p className="font-semibold">{parcel.parcelType}</p>
-              </div>
-
-              <div className="flex gap-4">
-                <div>
-                  <p className="text-sm text-slate-600">Size</p>
-                  <p className="font-semibold">{parcel.parcelSize}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600">Weight</p>
-                  <p className="font-semibold">{parcel.weight}kg</p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-600">Payment</p>
-                <p className="font-semibold">
-                  {parcel.paymentMode} - ৳{parcel.amount}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Addresses</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 bg-green-500 rounded-full" />
-                  <p className="text-sm font-medium">Pickup</p>
-                </div>
-                <p className="text-sm text-slate-600 ml-5">
-                  {parcel.pickupAddress.street}, {parcel.pickupAddress.city}
-                  <br />
-                  {parcel.pickupAddress.state} - {parcel.pickupAddress.zipCode}
-                </p>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 bg-red-500 rounded-full" />
-                  <p className="text-sm font-medium">Delivery</p>
-                </div>
-                <p className="text-sm text-slate-600 ml-5">
-                  {parcel.deliveryAddress.street}, {parcel.deliveryAddress.city}
-                  <br />
-                  {parcel.deliveryAddress.state} -{" "}
-                  {parcel.deliveryAddress.zipCode}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {parcel.agent && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Delivery Agent</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-slate-600" />
-                  <span className="font-semibold">{parcel.agent.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-slate-600" />
-                  <span className="text-sm">{parcel.agent.phone}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {parcel.qrCode && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">QR Code</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center">
-                <img
-                  src={parcel.qrCode}
-                  alt="Parcel QR Code"
-                  className="w-48 h-48"
-                />
-                <p className="text-sm text-slate-600 mt-2">
-                  Scan for quick tracking
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Status History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {parcel.statusHistory?.map((history, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`w-3 h-3 rounded-full ${
-                          index === 0 ? "bg-blue-600" : "bg-slate-300"
-                        }`}
-                      />
-                      {index !== parcel.statusHistory.length - 1 && (
-                        <div className="w-0.5 h-8 bg-slate-200" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{history.status}</p>
-                      <p className="text-xs text-slate-600">
-                        {new Date(history.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Track Parcel</h1>
+          <p className="mt-2 text-gray-600">
+            Tracking Number:{" "}
+            <span className="font-semibold">{parcel?.trackingNumber}</span>
+          </p>
         </div>
 
-        {/* Map */}
-        <div className="lg:col-span-2">
-          <Card className="h-[700px]">
-            <CardContent className="p-0 h-full">
-              <MapContainer
-                center={[center.lat, center.lng]}
-                zoom={13}
-                style={{ height: "100%", width: "100%", borderRadius: "8px" }}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Map */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold mb-4">Live Tracking</h2>
+              <TrackingMap
+                parcel={parcel}
+                agentLocation={agentLocation}
+                socket={socket}
+              />
+            </div>
+
+            {/* Status Timeline */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold mb-4">Delivery Timeline</h2>
+              {parcel?.statusHistory && parcel.statusHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {parcel.statusHistory.reverse().map((history, index) => (
+                    <div key={index} className="flex items-start">
+                      <div className="flex-shrink-0">
+                        <div
+                          className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                            index === 0 ? "bg-blue-600" : "bg-gray-300"
+                          }`}
+                        >
+                          <span className="text-white text-xs">
+                            {index + 1}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ml-4 flex-1">
+                        <p className="font-medium text-gray-900">
+                          {formatStatus(history.status)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(history.timestamp).toLocaleString()}
+                        </p>
+                        {history.notes && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {history.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No status updates yet</p>
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Status Card */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">Current Status</h3>
+              <span
+                className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(
+                  parcel?.status
+                )}`}
               >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+                {formatStatus(parcel?.status)}
+              </span>
+            </div>
 
-                {/* Pickup Marker - Green */}
-                <Marker
-                  position={[parcel.pickupCoords.lat, parcel.pickupCoords.lng]}
-                  icon={pickupIcon}
-                >
-                  <Popup>
-                    <strong>Pickup Location</strong>
-                    <br />
-                    {parcel.pickupAddress.city}
-                  </Popup>
-                </Marker>
+            {/* Agent Location Updater (Only for Agents) */}
+            {isAgent && (
+              <AgentLocationUpdater parcelId={parcelId} socket={socket} />
+            )}
 
-                {/* Delivery Marker - Red */}
-                <Marker
-                  position={[
-                    parcel.deliveryCoords.lat,
-                    parcel.deliveryCoords.lng,
-                  ]}
-                  icon={deliveryIcon}
-                >
-                  <Popup>
-                    <strong>Delivery Location</strong>
-                    <br />
-                    {parcel.deliveryAddress.city}
-                  </Popup>
-                </Marker>
-
-                {/* Agent Location - Blue (real-time) */}
-                {agentLocation && (
-                  <Marker
-                    position={[agentLocation.lat, agentLocation.lng]}
-                    icon={agentIcon}
-                  >
-                    <Popup>
-                      <strong>Agent Current Location</strong>
-                      <br />
-                      {parcel.agent?.name}
-                    </Popup>
-                  </Marker>
+            {/* Parcel Details */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">Parcel Details</h3>
+              <dl className="space-y-3">
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Size</dt>
+                  <dd className="text-sm text-gray-900 capitalize">
+                    {parcel?.parcelSize}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Type</dt>
+                  <dd className="text-sm text-gray-900">
+                    {parcel?.parcelType}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Payment</dt>
+                  <dd className="text-sm text-gray-900 uppercase">
+                    {parcel?.paymentMethod}
+                  </dd>
+                </div>
+                {parcel?.paymentMethod === "cod" && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">
+                      COD Amount
+                    </dt>
+                    <dd className="text-sm text-gray-900">
+                      ৳{parcel?.codAmount}
+                    </dd>
+                  </div>
                 )}
+              </dl>
+            </div>
 
-                {/* Route Polyline */}
-                <Polyline
-                  positions={routePath}
-                  pathOptions={{
-                    color: "#0011dd",
-                    weight: 5,
-                    opacity: 1,
-                    dashArray: "10, 10",
-                  }}
-                />
-              </MapContainer>
-            </CardContent>
-          </Card>
+            {/* Addresses */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">Addresses</h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Pickup
+                  </p>
+                  <p className="text-sm text-gray-900">
+                    {parcel?.pickupAddress?.address}
+                  </p>
+                  {parcel?.pickupAddress?.city && (
+                    <p className="text-xs text-gray-600">
+                      {parcel.pickupAddress.city}
+                    </p>
+                  )}
+                </div>
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Delivery
+                  </p>
+                  <p className="text-sm text-gray-900">
+                    {parcel?.deliveryAddress?.address}
+                  </p>
+                  {parcel?.deliveryAddress?.city && (
+                    <p className="text-xs text-gray-600">
+                      {parcel.deliveryAddress.city}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default TrackingPage;

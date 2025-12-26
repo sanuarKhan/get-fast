@@ -30,6 +30,7 @@ router.get(
   getAssignedParcels
 );
 router.post("/book", protect, restrictTo(ROLES.CUSTOMER), bookParcel);
+
 router.patch(
   "/agent/location",
   protect,

@@ -121,3 +121,36 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Import Leaflet CSS */
+@import "leaflet/dist/leaflet.css";
+
+/* Custom Map Styles */
+.leaflet-container {
+  font-family: "Inter", sans-serif;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.leaflet-popup-content {
+  margin: 12px;
+  line-height: 1.5;
+}
+
+.leaflet-popup-tip-container {
+  display: none;
+}
+
+/* Make map markers more visible */
+.leaflet-marker-icon {
+  transition: transform 0.2s ease;
+}
+
+.leaflet-marker-icon:hover {
+  transform: scale(1.1);
+  z-index: 1000 !important;
+}
