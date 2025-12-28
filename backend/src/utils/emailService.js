@@ -17,15 +17,15 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export const sendBookingConfirmation = async (parcel, customer) => {
+export const sendBookingConfirmation = async (parcel, email) => {
   const mailOptions = {
     from: EMAIL_FROM,
-    to: customer.email,
+    to: email,
     subject: `Booking Confirmed - ${parcel.bookingId}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1e293b;">Booking Confirmed</h2>
-        <p>Dear ${customer.name},</p>
+        <p>Dear ${parcel.customer.name},</p>
         <p>Your parcel has been booked successfully!</p>
         
         <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">

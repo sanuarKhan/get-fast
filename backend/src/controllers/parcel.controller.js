@@ -8,6 +8,7 @@ import {
   sendDeliveryConfirmation,
 } from "../utils/emailService.js";
 import User from "../models/user.model.js";
+import QRCode from "qrcode";
 
 //Customer: Book a parcel
 
@@ -16,50 +17,105 @@ export const bookParcel = async (req, res) => {
     const {
       pickupAddress,
       deliveryAddress,
-      pickupCoords,
-      deliveryCoords,
       parcelSize,
       parcelType,
       weight,
-      paymentMode,
-      amount,
+      paymentMethod,
+      codAmount,
+      notes,
     } = req.body;
 
+    // Validation
+    if (
+      !pickupAddress ||
+      !deliveryAddress ||
+      !parcelSize ||
+      !parcelType ||
+      !paymentMethod
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all required fields",
+      });
+    }
+
+    // Validate coordinates
+    if (!pickupAddress.coordinates?.lat || !pickupAddress.coordinates?.lng) {
+      return res.status(400).json({
+        success: false,
+        message: "Pickup location coordinates are required",
+      });
+    }
+
+    if (
+      !deliveryAddress.coordinates?.lat ||
+      !deliveryAddress.coordinates?.lng
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Delivery location coordinates are required",
+      });
+    }
+
+    // Create parcel
     const parcel = await Parcel.create({
       customer: req.user._id,
       pickupAddress,
       deliveryAddress,
-      pickupCoords,
-      deliveryCoords,
       parcelSize,
       parcelType,
       weight,
-      paymentMode,
-      amount,
-      statusHistory: [
-        {
-          status: PARCEL_STATUS.PENDING,
-          updatedBy: req.user._id,
-        },
-      ],
+      paymentMethod,
+      codAmount: paymentMethod === "cod" ? codAmount : 0,
+      notes,
+      status: "pending",
     });
 
-    // Generate QR Code with booking ID
-    const qrCode = await generateQRCode(parcel.bookingId);
-    parcel.qrCode = qrCode;
+    // Generate QR Code data
+    const qrData = {
+      parcelId: parcel._id,
+      trackingNumber: parcel.trackingNumber,
+      customer: req.user._id,
+      createdAt: parcel.createdAt,
+    };
+
+    // Generate QR Code as base64 image
+    const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(qrData), {
+      errorCorrectionLevel: "H",
+      type: "image/png",
+      quality: 0.95,
+      margin: 1,
+      width: 300,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    });
+
+    // Save QR code to parcel
+    parcel.qrCode = qrCodeDataURL;
     await parcel.save();
 
-    // Send confirmation email
-    const customer = await User.findById(req.user._id);
-    await sendBookingConfirmation(parcel, customer);
+    // Populate customer details
+    await parcel.populate("customer", "name email phone");
 
-    // Emit socket event
-    const io = req.app.get("io");
-    io.emit("parcel:new", parcel);
+    // Send email 
+    await sendBookingConfirmation(parcel, req.user.email);
 
-    res.json({ success: true, parcel });
+    //io.emit("parcel:booked", parcel); :TODO
+
+    res.status(201).json({
+      success: true,
+      message: "Parcel booked successfully",
+      data: parcel,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error booking parcel:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to book parcel",
+      error: error.message,
+    });
   }
 };
 
@@ -382,5 +438,216 @@ export const getDashboardStats = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+export const getParcelQRCode = async (req, res) => {
+  try {
+    const parcel = await Parcel.findById(req.params.id).select(
+      "qrCode trackingNumber customer assignedAgent"
+    );
+
+    if (!parcel) {
+      return res.status(404).json({
+        success: false,
+        message: "Parcel not found",
+      });
+    }
+
+    // Check authorization
+    const isOwner = parcel.customer?.toString() === req.user._id.toString();
+    const isAgent =
+      parcel.assignedAgent?.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+
+    if (!isOwner && !isAgent && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to access this QR code",
+      });
+    }
+
+    if (!parcel.qrCode) {
+      // Generate QR code if not exists
+      const qrData = {
+        parcelId: parcel._id,
+        trackingNumber: parcel.trackingNumber,
+        customer: parcel.customer,
+      };
+
+      const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(qrData), {
+        errorCorrectionLevel: "H",
+        type: "image/png",
+        quality: 0.95,
+        margin: 1,
+        width: 300,
+      });
+
+      parcel.qrCode = qrCodeDataURL;
+      await parcel.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        qrCode: parcel.qrCode,
+        trackingNumber: parcel.trackingNumber,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching QR code:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch QR code",
+      error: error.message,
+    });
+  }
+};
+
+export const verifyQRCode = async (req, res) => {
+  try {
+    const { qrData } = req.body;
+
+    if (!qrData) {
+      return res.status(400).json({
+        success: false,
+        message: "QR data is required",
+      });
+    }
+
+    // Parse QR data
+    let parsedData;
+    try {
+      parsedData = JSON.parse(qrData);
+    } catch (parseError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid QR code format",
+      });
+    }
+
+    // Find parcel
+    const parcel = await Parcel.findById(parsedData.parcelId)
+      .populate("customer", "name email phone")
+      .populate("assignedAgent", "name email phone");
+
+    if (!parcel) {
+      return res.status(404).json({
+        success: false,
+        message: "Parcel not found",
+      });
+    }
+
+    // Verify tracking number matches
+    if (parcel.trackingNumber !== parsedData.trackingNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "QR code data mismatch",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "QR code verified successfully",
+      data: parcel,
+    });
+  } catch (error) {
+    console.error("Error verifying QR code:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to verify QR code",
+      error: error.message,
+    });
+  }
+};
+
+export const scanQRAndUpdateStatus = async (req, res) => {
+  try {
+    const { qrData, status, notes } = req.body;
+
+    if (!qrData || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "QR data and status are required",
+      });
+    }
+
+    // Valid statuses for agent scanning
+    const validStatuses = [
+      "picked_up",
+      "in_transit",
+      "out_for_delivery",
+      "delivered",
+      "failed",
+    ];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status",
+      });
+    }
+
+    // Parse QR data
+    let parsedData;
+    try {
+      parsedData = JSON.parse(qrData);
+    } catch (parseError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid QR code format",
+      });
+    }
+
+    // Find parcel assigned to this agent
+    const parcel = await Parcel.findOne({
+      _id: parsedData.parcelId,
+      assignedAgent: req.user._id,
+    }).populate("customer", "name email phone");
+
+    if (!parcel) {
+      return res.status(404).json({
+        success: false,
+        message: "Parcel not found or not assigned to you",
+      });
+    }
+
+    // Update status
+    parcel.status = status;
+    if (notes) parcel.notes = notes;
+
+    if (status === "delivered") {
+      parcel.actualDeliveryDate = new Date();
+    } else if (status === "failed") {
+      parcel.deliveryAttempts += 1;
+      if (notes) parcel.failureReason = notes;
+    }
+
+    parcel._currentUser = req.user._id; // For status history
+    await parcel.save();
+
+    // Emit socket event
+    if (req.app.get("io")) {
+      req.app.get("io").emit(`parcel-status-${parcel._id}`, {
+        status: parcel.status,
+        timestamp: new Date(),
+      });
+    }
+
+    // Send notification to customer
+    // await sendStatusUpdateEmail(parcel.customer.email, parcel);
+
+    res.status(200).json({
+      success: true,
+      message: `Parcel status updated to ${status}`,
+      data: parcel,
+    });
+  } catch (error) {
+    console.error("Error scanning QR and updating status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update parcel status",
+      error: error.message,
+    });
   }
 };
