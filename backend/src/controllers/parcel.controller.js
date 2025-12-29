@@ -165,7 +165,7 @@ export const getMyBookings = async (req, res) => {
     if (status) query.status = status;
 
     const parcels = await Parcel.find(query)
-      .populate("agent", "name phone")
+      .populate("assignedAgent", "name phone")
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
