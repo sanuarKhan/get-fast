@@ -1,22 +1,31 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next"; // ← ADD THIS
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import LanguageSwitcher from "@/components/LanguageSwitcher"; // ← ADD THIS
 
 export default function Register() {
+  const { t } = useTranslation(); // ← ADD THIS
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    phone: '',
-    role: 'customer'
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    role: "customer",
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -26,18 +35,18 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       await register(formData);
-      
+
       const role = formData.role;
-      if (role === 'admin') navigate('/admin');
-      else if (role === 'agent') navigate('/agent');
-      else navigate('/customer');
+      if (role === "admin") navigate("/admin");
+      else if (role === "agent") navigate("/agent");
+      else navigate("/customer");
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -46,9 +55,14 @@ export default function Register() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
       <Card className="w-full max-w-md">
+        {/* Language Switcher - Add this */}
+        <div className="flex justify-end p-4">
+          <LanguageSwitcher variant="icon" />
+        </div>
+
         <CardHeader>
-          <CardTitle className="text-2xl">Create Account</CardTitle>
-          <CardDescription>Register to start using our courier service</CardDescription>
+          <CardTitle className="text-2xl">{t("auth.registerTitle")}</CardTitle>
+          <CardDescription>{t("auth.registerDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -57,9 +71,9 @@ export default function Register() {
                 {error}
               </div>
             )}
-            
+
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">{t("auth.fullName")}</Label>
               <Input
                 id="name"
                 name="name"
@@ -69,9 +83,9 @@ export default function Register() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("auth.email")}</Label>
               <Input
                 id="email"
                 name="email"
@@ -82,9 +96,9 @@ export default function Register() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">{t("auth.phone")}</Label>
               <Input
                 id="phone"
                 name="phone"
@@ -95,9 +109,9 @@ export default function Register() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.password")}</Label>
               <Input
                 id="password"
                 name="password"
@@ -109,9 +123,9 @@ export default function Register() {
                 minLength={6}
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">{t("auth.role")}</Label>
               <select
                 id="role"
                 name="role"
@@ -119,20 +133,23 @@ export default function Register() {
                 onChange={handleChange}
                 className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
               >
-                <option value="customer">Customer</option>
-                <option value="agent">Delivery Agent</option>
-                <option value="admin">Admin</option>
+                <option value="customer">{t("auth.customer")}</option>
+                <option value="agent">{t("auth.agent")}</option>
+                <option value="admin">{t("auth.admin")}</option>
               </select>
             </div>
-            
+
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Registering...' : 'Register'}
+              {loading ? t("common.loading") : t("common.register")}
             </Button>
-            
+
             <p className="text-sm text-center text-slate-600">
-              Already have an account?{' '}
-              <Link to="/login" className="text-slate-900 font-medium hover:underline">
-                Login
+              {t("auth.haveAccount")}{" "}
+              <Link
+                to="/login"
+                className="text-slate-900 font-medium hover:underline"
+              >
+                {t("common.login")}
               </Link>
             </p>
           </form>

@@ -11,69 +11,75 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import { Toaster } from "@/components/ui/sonner";
 import ScanQR from "@/pages/ScanQR";
 import TrackParcel from "@/pages/TrackParcel";
+import Navbar from "./components/Navbar";
+import "./i18n/config"; // ← ADD THIS LINE - Import i18n configuration
+
 function App() {
   return (
     <AuthProvider>
       <SocketProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+          <div className="min-h-screen bg-gray-50">
+            <Navbar />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-            <Route
-              path="/customer"
-              element={
-                <ProtectedRoute roles={["customer"]}>
-                  <CustomerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/customer/book"
-              element={
-                <ProtectedRoute roles={["customer"]}>
-                  <BookParcel />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/customer"
+                element={
+                  <ProtectedRoute roles={["customer"]}>
+                    <CustomerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/book"
+                element={
+                  <ProtectedRoute roles={["customer"]}>
+                    <BookParcel />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/agent"
-              element={
-                <ProtectedRoute roles={["agent"]}>
-                  <AgentDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/agent"
+                element={
+                  <ProtectedRoute roles={["agent"]}>
+                    <AgentDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute roles={["admin"]}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute roles={["admin"]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route
-              path="customer/track/:id"
-              element={
-                <ProtectedRoute roles={["customer"]}>
-                  <TrackParcel />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/agent/scan"
-              element={
-                <ProtectedRoute roles={["agent"]}>
-                  <ScanQR />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-          <Toaster />
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route
+                path="customer/track/:id"
+                element={
+                  <ProtectedRoute roles={["customer"]}>
+                    <TrackParcel />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/agent/scan"
+                element={
+                  <ProtectedRoute roles={["agent"]}>
+                    <ScanQR />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+            <Toaster />
+          </div>
         </BrowserRouter>
       </SocketProvider>
     </AuthProvider>

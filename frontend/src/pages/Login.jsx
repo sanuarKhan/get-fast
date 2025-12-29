@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next"; // ← ADD THIS
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,14 +12,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import LanguageSwitcher from "@/components/LanguageSwitcher"; // ← ADD THIS
 
 export default function Login() {
+  const { t } = useTranslation(); // ← ADD THIS
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -45,11 +48,14 @@ export default function Login() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
       <Card className="w-full max-w-md">
+        {/* Language Switcher - Add this */}
+        <div className="flex justify-end p-4">
+          <LanguageSwitcher variant="icon" />
+        </div>
+
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your credentials to access your account
-          </CardDescription>
+          <CardTitle className="text-2xl">{t("auth.loginTitle")}</CardTitle>
+          <CardDescription>{t("auth.loginDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -60,7 +66,7 @@ export default function Login() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("auth.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -72,7 +78,7 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -84,16 +90,16 @@ export default function Login() {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
+              {loading ? t("common.loading") : t("common.login")}
             </Button>
 
             <p className="text-sm text-center text-slate-600">
-              Don't have an account?{" "}
+              {t("auth.noAccount")}{" "}
               <Link
                 to="/register"
                 className="text-slate-900 font-medium hover:underline"
               >
-                Register
+                {t("common.register")}
               </Link>
             </p>
           </form>
