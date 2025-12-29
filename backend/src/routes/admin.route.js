@@ -2,16 +2,14 @@ import express from "express";
 import {
   getAllUsers,
   getBookingsChartData,
+  getDashboardStats,
   getRecentActivities,
   getRevenueAnalytics,
+  getStatusDistribution,
   getTopAgents,
 } from "../controllers/admin.controller.js";
 import { protect, restrictTo } from "../middleware/auth.middleware.js";
 import { ROLES } from "../constants.js";
-import {
-  getDashboardStats,
-  getStatusDistribution,
-} from "../controllers/parcel.controller.js";
 
 const router = express.Router();
 

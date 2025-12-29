@@ -16,7 +16,6 @@ import {
 import {
   protect,
   restrictTo,
-  authorize,
 } from "../middleware/auth.middleware.js";
 import { ROLES } from "../constants.js";
 
@@ -37,7 +36,7 @@ router.get(
   getAssignedParcels
 );
 // router.post("/book", protect, restrictTo(ROLES.CUSTOMER), bookParcel);
-router.post("/book", protect, authorize("customer"), bookParcel);
+router.post("/book", protect, restrictTo(ROLES.CUSTOMER), bookParcel);
 
 router.patch(
   "/agent/location",
@@ -58,7 +57,12 @@ router.get("/:id", protect, getParcel);
 
 //QR Code Routes
 router.get("/:id/qrcode", protect, getParcelQRCode);
-router.post("/verify-qr", protect, authorize("agent", "admin"), verifyQRCode);
-router.post("/scan-qr", protect, authorize("agent"), scanQRAndUpdateStatus);
+router.post("/verify-qr", protect, restrictTo(ROLES.AGENT), verifyQRCode);
+router.post(
+  "/scan-qr",
+  protect,
+  restrictTo(ROLES.AGENT),
+  scanQRAndUpdateStatus
+);
 
 export default router;
