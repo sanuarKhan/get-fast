@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 
 const parcelSchema = new mongoose.Schema(
   {
-    
     customer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -18,7 +17,6 @@ const parcelSchema = new mongoose.Schema(
         lat: { type: Number, required: true },
         lng: { type: Number, required: true },
       },
-      // GeoJSON format for MongoDB geospatial queries
       location: {
         type: {
           type: String,
@@ -26,7 +24,7 @@ const parcelSchema = new mongoose.Schema(
           default: "Point",
         },
         coordinates: {
-          type: [Number], // [longitude, latitude]
+          type: [Number],
           required: true,
         },
       },
@@ -99,16 +97,13 @@ const parcelSchema = new mongoose.Schema(
       ref: "User",
     },
 
-    // NEW FIELD: Agent's current location during delivery
     agentCurrentLocation: {
       type: {
         type: String,
         enum: ["Point"],
-        default: "Point",
       },
       coordinates: {
-        type: [Number], // [longitude, latitude]
-        index: "2dsphere",
+        type: [Number],
       },
       accuracy: Number,
       timestamp: Date,
@@ -117,96 +112,53 @@ const parcelSchema = new mongoose.Schema(
     trackingNumber: {
       type: String,
       unique: true,
-      required: true,
+      // REMOVED required: true to let pre-save hook generate it
     },
 
     estimatedDeliveryDate: Date,
-
     actualDeliveryDate: Date,
-
-    deliveryAttempts: {
-      type: Number,
-      default: 0,
-    },
-
+    deliveryAttempts: { type: Number, default: 0 },
     failureReason: String,
-
     notes: String,
-
-    qrCode: String, // Base64 QR code for scanning
+    qrCode: String,
 
     statusHistory: [
       {
         status: String,
-        timestamp: {
-          type: Date,
-          default: Date.now,
-        },
-        updatedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-        },
+        timestamp: { type: Date, default: Date.now },
+        updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         location: {
-          type: {
-            type: String,
-            enum: ["Point"],
-          },
+          type: { type: String, enum: ["Point"] },
           coordinates: [Number],
         },
         notes: String,
       },
     ],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Create geospatial indexes for location-based queries
+// Indexes
 parcelSchema.index({ "pickupAddress.location": "2dsphere" });
 parcelSchema.index({ "deliveryAddress.location": "2dsphere" });
-parcelSchema.index({ agentCurrentLocation: "2dsphere" });
-
-// Index for efficient queries
+parcelSchema.index({ agentCurrentLocation: "2dsphere", sparse: true }); // sparse: true allows null values
 parcelSchema.index({ customer: 1, status: 1 });
 parcelSchema.index({ assignedAgent: 1, status: 1 });
 parcelSchema.index({ trackingNumber: 1 });
 parcelSchema.index({ createdAt: -1 });
 
-// Generate tracking number before saving
-parcelSchema.pre("save", async function (next) {
+// Generate tracking number
+parcelSchema.pre("save", function () {
   if (this.isNew && !this.trackingNumber) {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
     this.trackingNumber = `GF${timestamp}${random}`;
   }
-
-  // Sync coordinates with GeoJSON location
-  if (this.pickupAddress && this.pickupAddress.coordinates) {
-    this.pickupAddress.location = {
-      type: "Point",
-      coordinates: [
-        this.pickupAddress.coordinates.lng,
-        this.pickupAddress.coordinates.lat,
-      ],
-    };
-  }
-
-  if (this.deliveryAddress && this.deliveryAddress.coordinates) {
-    this.deliveryAddress.location = {
-      type: "Point",
-      coordinates: [
-        this.deliveryAddress.coordinates.lng,
-        this.deliveryAddress.coordinates.lat,
-      ],
-    };
-  }
-
-  next();
+  // next();
 });
 
-// Add status to history when status changes
-parcelSchema.pre("save", function (next) {
+// Add status to history
+parcelSchema.pre("save", function () {
   if (this.isModified("status") && !this.isNew) {
     this.statusHistory.push({
       status: this.status,
@@ -214,16 +166,15 @@ parcelSchema.pre("save", function (next) {
       updatedBy: this._currentUser || null,
     });
   }
-  next();
+  // next();
 });
 
-// Virtual for delivery distance (in kilometers)
+// Virtual for delivery distance
 parcelSchema.virtual("deliveryDistance").get(function () {
-  if (!this.pickupAddress?.location || !this.deliveryAddress?.location) {
+  if (!this.pickupAddress?.location || !this.deliveryAddress?.location)
     return null;
-  }
 
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const lat1 = this.pickupAddress.location.coordinates[1];
   const lon1 = this.pickupAddress.location.coordinates[0];
   const lat2 = this.deliveryAddress.location.coordinates[1];
@@ -240,11 +191,8 @@ parcelSchema.virtual("deliveryDistance").get(function () {
       Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c;
-
-  return Math.round(distance * 100) / 100;
+  return Math.round(R * c * 100) / 100;
 });
 
 const Parcel = mongoose.model("Parcel", parcelSchema);
-
 export default Parcel;

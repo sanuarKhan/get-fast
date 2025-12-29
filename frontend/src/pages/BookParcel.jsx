@@ -1,53 +1,130 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-// import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useTranslation } from "react-i18next";
-
 export default function BookParcel() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
-  //   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [gettingLocation, setGettingLocation] = useState({
+    pickup: false,
+    delivery: false,
+  });
 
   const [formData, setFormData] = useState({
     pickupAddress: {
-      street: "",
+      address: "",
       city: "",
       state: "",
       zipCode: "",
+      coordinates: { lat: null, lng: null },
     },
     deliveryAddress: {
-      street: "",
+      address: "",
       city: "",
       state: "",
       zipCode: "",
+      coordinates: { lat: null, lng: null },
     },
-    pickupCoords: { lat: 23.8103, lng: 90.4125 }, // Default Dhaka
-    deliveryCoords: { lat: 23.8103, lng: 90.4125 },
-    parcelSize: "Small",
-    parcelType: "Document",
+    parcelSize: "small",
+    parcelType: "",
     weight: "",
-    paymentMode: "Prepaid",
-    amount: "",
+    paymentMethod: "prepaid",
+    codAmount: 0,
+    notes: "",
   });
+
+  const getCurrentLocation = (type) => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported");
+      return;
+    }
+
+    setGettingLocation((prev) => ({ ...prev, [type]: true }));
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData((prev) => ({
+          ...prev,
+          [`${type}Address`]: {
+            ...prev[`${type}Address`],
+            coordinates: {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            },
+          },
+        }));
+        setGettingLocation((prev) => ({ ...prev, [type]: false }));
+        toast.success(`${type} location set`);
+      },
+      (error) => {
+        setGettingLocation((prev) => ({ ...prev, [type]: false }));
+        let msg = "Failed to get location";
+        if (error.code === 1) msg = "Location permission denied";
+        else if (error.code === 2) msg = "Location unavailable";
+        else if (error.code === 3) msg = "Location timeout";
+        toast.error(msg);
+        console.error("Geolocation error:", error);
+      },
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
+    );
+  };
+
+  // Convert address text to coordinates using OpenStreetMap API
+  const geocodeAddress = async (addressObj, type) => {
+    const { address, city, state, zipCode } = addressObj;
+    if (!address || !city) {
+      toast.error("Please fill address and city first");
+      return;
+    }
+
+    try {
+      setGettingLocation((prev) => ({ ...prev, [type]: true }));
+
+      const fullAddress = `${address}, ${city}, ${state || ""}, ${
+        zipCode || ""
+      }`;
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          fullAddress
+        )}&limit=1`
+      );
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          [`${type}Address`]: {
+            ...prev[`${type}Address`],
+            coordinates: {
+              lat: parseFloat(data[0].lat),
+              lng: parseFloat(data[0].lon),
+            },
+          },
+        }));
+        toast.success(`Coordinates found for ${type} address`);
+      } else {
+        toast.error("Address not found. Please check details.");
+      }
+    } catch (error) {
+      toast.error("Failed to find address location");
+      console.error("Geocoding error:", error);
+    } finally {
+      setGettingLocation((prev) => ({ ...prev, [type]: false }));
+    }
+  };
 
   const handleChange = (e, section) => {
     const { name, value } = e.target;
-
     if (section) {
       setFormData({
         ...formData,
-        [section]: { ...formData[section], [name]: value }, //ss:e
+        [section]: { ...formData[section], [name]: value },
       });
     } else {
       setFormData({ ...formData, [name]: value });
@@ -56,18 +133,22 @@ export default function BookParcel() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
 
+    if (
+      !formData.pickupAddress.coordinates.lat ||
+      !formData.deliveryAddress.coordinates.lat
+    ) {
+      toast.error("Please set location coordinates");
+      return;
+    }
+
+    setLoading(true);
     try {
       const response = await api.post("/api/parcels/book", formData);
-      navigate("/customer", {
-        state: {
-          message: `Parcel booked successfully! Booking ID: ${response.data.parcel.bookingId}`,
-        },
-      });
+      toast.success(`Booked! Tracking: ${response.data.data.trackingNumber}`);
+      navigate("/customer");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to book parcel");
+      toast.error(err.response?.data?.message || "Failed to book parcel");
     } finally {
       setLoading(false);
     }
@@ -90,33 +171,38 @@ export default function BookParcel() {
 
       <div className="max-w-4xl mx-auto p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
-              {error}
-            </div>
-          )}
-
           {/* Pickup Address */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Pickup Address</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => getCurrentLocation("pickup")}
+                disabled={gettingLocation.pickup}
+              >
+                {gettingLocation.pickup ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MapPin className="h-4 w-4" />
+                )}
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="pickupStreet">Street Address</Label>
+                <Label>Street Address</Label>
                 <Input
-                  id="pickupStreet"
-                  name="street"
-                  value={formData.pickupAddress.street}
+                  name="address"
+                  value={formData.pickupAddress.address}
                   onChange={(e) => handleChange(e, "pickupAddress")}
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pickupCity">City</Label>
+                  <Label>City</Label>
                   <Input
-                    id="pickupCity"
                     name="city"
                     value={formData.pickupAddress.city}
                     onChange={(e) => handleChange(e, "pickupAddress")}
@@ -124,9 +210,8 @@ export default function BookParcel() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pickupState">State/Division</Label>
+                  <Label>State/Division</Label>
                   <Input
-                    id="pickupState"
                     name="state"
                     value={formData.pickupAddress.state}
                     onChange={(e) => handleChange(e, "pickupAddress")}
@@ -135,39 +220,62 @@ export default function BookParcel() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pickupZip">Zip Code</Label>
+                <Label>Zip Code</Label>
                 <Input
-                  id="pickupZip"
                   name="zipCode"
                   value={formData.pickupAddress.zipCode}
                   onChange={(e) => handleChange(e, "pickupAddress")}
                   required
                 />
               </div>
+              {formData.pickupAddress.coordinates.lat && (
+                <p className="text-xs text-green-600">
+                  📍 Location:{" "}
+                  {formData.pickupAddress.coordinates.lat.toFixed(4)},{" "}
+                  {formData.pickupAddress.coordinates.lng.toFixed(4)}
+                </p>
+              )}
             </CardContent>
           </Card>
 
           {/* Delivery Address */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Delivery Address</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  geocodeAddress(formData.deliveryAddress, "delivery")
+                }
+                disabled={
+                  gettingLocation.delivery ||
+                  !formData.deliveryAddress.address ||
+                  !formData.deliveryAddress.city
+                }
+              >
+                {gettingLocation.delivery ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MapPin className="h-4 w-4" />
+                )}
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="deliveryStreet">Street Address</Label>
+                <Label>Street Address</Label>
                 <Input
-                  id="deliveryStreet"
-                  name="street"
-                  value={formData.deliveryAddress.street}
+                  name="address"
+                  value={formData.deliveryAddress.address}
                   onChange={(e) => handleChange(e, "deliveryAddress")}
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="deliveryCity">City</Label>
+                  <Label>City</Label>
                   <Input
-                    id="deliveryCity"
                     name="city"
                     value={formData.deliveryAddress.city}
                     onChange={(e) => handleChange(e, "deliveryAddress")}
@@ -175,9 +283,8 @@ export default function BookParcel() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="deliveryState">State/Division</Label>
+                  <Label>State/Division</Label>
                   <Input
-                    id="deliveryState"
                     name="state"
                     value={formData.deliveryAddress.state}
                     onChange={(e) => handleChange(e, "deliveryAddress")}
@@ -186,15 +293,21 @@ export default function BookParcel() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="deliveryZip">Zip Code</Label>
+                <Label>Zip Code</Label>
                 <Input
-                  id="deliveryZip"
                   name="zipCode"
                   value={formData.deliveryAddress.zipCode}
                   onChange={(e) => handleChange(e, "deliveryAddress")}
                   required
                 />
               </div>
+              {formData.deliveryAddress.coordinates.lat && (
+                <p className="text-xs text-green-600">
+                  📍 Location:{" "}
+                  {formData.deliveryAddress.coordinates.lat.toFixed(4)},{" "}
+                  {formData.deliveryAddress.coordinates.lng.toFixed(4)}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -206,25 +319,23 @@ export default function BookParcel() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="parcelSize">Parcel Size</Label>
+                  <Label>Parcel Size</Label>
                   <select
-                    id="parcelSize"
                     name="parcelSize"
                     value={formData.parcelSize}
                     onChange={handleChange}
                     className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
                     required
                   >
-                    <option value="Small">Small</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Large">Large</option>
-                    <option value="Extra Large">Extra Large</option>
+                    <option value="small">Small</option>
+                    <option value="medium">Medium</option>
+                    <option value="large">Large</option>
+                    <option value="extra-large">Extra Large</option>
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="weight">Weight (kg)</Label>
+                  <Label>Weight (kg)</Label>
                   <Input
-                    id="weight"
                     name="weight"
                     type="number"
                     step="0.1"
@@ -236,11 +347,10 @@ export default function BookParcel() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="parcelType">Parcel Type</Label>
+                <Label>Parcel Type</Label>
                 <Input
-                  id="parcelType"
                   name="parcelType"
-                  placeholder="e.g., Electronics, Documents, Clothing"
+                  placeholder="e.g., Electronics, Documents"
                   value={formData.parcelType}
                   onChange={handleChange}
                   required
@@ -249,30 +359,40 @@ export default function BookParcel() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="paymentMode">Payment Mode</Label>
+                  <Label>Payment Method</Label>
                   <select
-                    id="paymentMode"
-                    name="paymentMode"
-                    value={formData.paymentMode}
+                    name="paymentMethod"
+                    value={formData.paymentMethod}
                     onChange={handleChange}
                     className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
                     required
                   >
-                    <option value="Prepaid">Prepaid</option>
-                    <option value="COD">Cash on Delivery (COD)</option>
+                    <option value="prepaid">Prepaid</option>
+                    <option value="cod">Cash on Delivery</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount (BDT)</Label>
-                  <Input
-                    id="amount"
-                    name="amount"
-                    type="number"
-                    value={formData.amount}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+                {formData.paymentMethod === "cod" && (
+                  <div className="space-y-2">
+                    <Label>COD Amount (BDT)</Label>
+                    <Input
+                      name="codAmount"
+                      type="number"
+                      value={formData.codAmount}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes (Optional)</Label>
+                <Input
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  placeholder="Any special instructions"
+                />
               </div>
             </CardContent>
           </Card>

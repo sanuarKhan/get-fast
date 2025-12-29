@@ -27,42 +27,68 @@ export const bookParcel = async (req, res) => {
 
     // Validation
     if (
-      !pickupAddress ||
-      !deliveryAddress ||
-      !parcelSize ||
-      !parcelType ||
-      !paymentMethod
+      !pickupAddress?.address ||
+      !pickupAddress?.city ||
+      !pickupAddress?.coordinates?.lat ||
+      !pickupAddress?.coordinates?.lng
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please provide all required fields",
-      });
-    }
-
-    // Validate coordinates
-    if (!pickupAddress.coordinates?.lat || !pickupAddress.coordinates?.lng) {
-      return res.status(400).json({
-        success: false,
-        message: "Pickup location coordinates are required",
+        message: "Complete pickup address with coordinates required",
       });
     }
 
     if (
-      !deliveryAddress.coordinates?.lat ||
-      !deliveryAddress.coordinates?.lng
+      !deliveryAddress?.address ||
+      !deliveryAddress?.city ||
+      !deliveryAddress?.coordinates?.lat ||
+      !deliveryAddress?.coordinates?.lng
     ) {
       return res.status(400).json({
         success: false,
-        message: "Delivery location coordinates are required",
+        message: "Complete delivery address with coordinates required",
       });
     }
 
-    // Create parcel
+    if (!parcelSize || !parcelType || !paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        message: "Parcel size, type, and payment method are required",
+      });
+    }
+
+    // Validate COD amount
+    if (paymentMethod === "cod" && (!codAmount || codAmount <= 0)) {
+      return res.status(400).json({
+        success: false,
+        message: "COD amount is required for cash on delivery",
+      });
+    }
+
+    // Create parcel with properly formatted location data
     const parcel = await Parcel.create({
       customer: req.user._id,
-      pickupAddress,
-      deliveryAddress,
-      parcelSize,
+      pickupAddress: {
+        ...pickupAddress,
+        location: {
+          type: "Point",
+          coordinates: [
+            pickupAddress.coordinates.lng,
+            pickupAddress.coordinates.lat,
+          ], // [lng, lat]
+        },
+      },
+      deliveryAddress: {
+        ...deliveryAddress,
+        location: {
+          type: "Point",
+          coordinates: [
+            deliveryAddress.coordinates.lng,
+            deliveryAddress.coordinates.lat,
+          ], // [lng, lat]
+        },
+      },
+      parcelSize: parcelSize.toLowerCase(),
       parcelType,
       weight,
       paymentMethod,
@@ -71,7 +97,7 @@ export const bookParcel = async (req, res) => {
       status: "pending",
     });
 
-    // Generate QR Code data
+    // Generate QR Code
     const qrData = {
       parcelId: parcel._id,
       trackingNumber: parcel.trackingNumber,
@@ -79,7 +105,6 @@ export const bookParcel = async (req, res) => {
       createdAt: parcel.createdAt,
     };
 
-    // Generate QR Code as base64 image
     const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(qrData), {
       errorCorrectionLevel: "H",
       type: "image/png",
@@ -92,17 +117,28 @@ export const bookParcel = async (req, res) => {
       },
     });
 
-    // Save QR code to parcel
     parcel.qrCode = qrCodeDataURL;
     await parcel.save();
 
     // Populate customer details
     await parcel.populate("customer", "name email phone");
 
-    // Send email 
-    await sendBookingConfirmation(parcel, req.user.email);
+    // Send email confirmation
+    try {
+      await sendBookingConfirmation(parcel, req.user.email);
+    } catch (emailError) {
+      console.error("Email send failed:", emailError);
+      // Don't fail the request if email fails
+    }
 
-    //io.emit("parcel:booked", parcel); :TODO
+    // Emit socket event if io is available
+    if (req.app.get("io")) {
+      req.app.get("io").emit("parcel:booked", {
+        parcelId: parcel._id,
+        trackingNumber: parcel.trackingNumber,
+        status: parcel.status,
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -440,7 +476,6 @@ export const getDashboardStats = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 export const getParcelQRCode = async (req, res) => {
   try {
