@@ -72,7 +72,7 @@ export default function CustomerDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white border-b px-4 py-3">
+      {/* <nav className="bg-white border-b px-4 py-3">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <h1 className="text-xl font-bold">Customer Dashboard</h1>
           <div className="flex items-center gap-4">
@@ -82,7 +82,7 @@ export default function CustomerDashboard() {
             </Button>
           </div>
         </div>
-      </nav>
+      </nav> */}
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">

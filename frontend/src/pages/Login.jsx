@@ -49,13 +49,13 @@ export default function Login() {
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
       <Card className="w-full max-w-md">
         {/* Language Switcher - Add this */}
-        <div className="flex justify-end p-4">
+        {/* <div className="flex justify-end p-4">
           <LanguageSwitcher variant="icon" />
-        </div>
+        </div> */}
 
         <CardHeader>
-          <CardTitle className="text-2xl">{t("auth.loginTitle")}</CardTitle>
-          <CardDescription>{t("auth.loginDesc")}</CardDescription>
+          <CardTitle className="text-2xl">{t("auth.welcome")}</CardTitle>
+          <CardDescription>{t("auth.signIn")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -97,9 +97,9 @@ export default function Login() {
               {t("auth.noAccount")}{" "}
               <Link
                 to="/register"
-                className="text-slate-900 font-medium hover:underline"
+                className="text-lime-700 font-bold hover:underline pointer"
               >
-                {t("common.register")}
+                {t("auth.signUpHere")}
               </Link>
             </p>
           </form>

@@ -24,22 +24,22 @@ const Navbar = () => {
       return [];
     }
 
-    const commonItems = [{ path: "/dashboard", label: t("nav.dashboard") }];
+    const commonItems = [{ path: "/", label: t("nav.home") }];
 
     if (user.role === "customer") {
       return [
         ...commonItems,
-        { path: "/parcels/book", label: t("parcel.bookParcel") },
-        { path: "/bookings", label: t("nav.bookings") },
-        { path: "/tracking", label: t("nav.tracking") },
+        { path: "/customer/book", label: t("parcel.bookParcel") },
+        // { path: "/bookings", label: t("nav.bookings") },
+        { path: "/customer/track/:id", label: t("nav.tracking") },
       ];
     }
 
     if (user.role === "agent") {
       return [
         ...commonItems,
-        { path: "/agent/parcels", label: t("nav.parcels") },
-        { path: "/agent/scanner", label: t("qr.scanQR") },
+        { path: "/agent", label: t("nav.parcels") },
+        { path: "/agent/scan", label: t("qr.scanQR") },
         { path: "/agent/route", label: t("agent.viewRoute") },
       ];
     }
@@ -47,7 +47,7 @@ const Navbar = () => {
     if (user.role === "admin") {
       return [
         ...commonItems,
-        { path: "/admin/parcels", label: t("nav.parcels") },
+        { path: "/admin", label: t("nav.parcels") },
         { path: "/admin/users", label: t("nav.users") },
         { path: "/admin/reports", label: t("nav.reports") },
       ];

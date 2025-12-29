@@ -12,7 +12,7 @@ import { Toaster } from "@/components/ui/sonner";
 import ScanQR from "@/pages/ScanQR";
 import TrackParcel from "@/pages/TrackParcel";
 import Navbar from "./components/Navbar";
-import "./i18n/config"; // ← ADD THIS LINE - Import i18n configuration
+import "./i18n/config"; 
 
 function App() {
   return (

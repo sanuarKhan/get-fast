@@ -55,14 +55,14 @@ export default function Register() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
       <Card className="w-full max-w-md">
-        {/* Language Switcher - Add this */}
+        {/* Language Switcher - Add this
         <div className="flex justify-end p-4">
           <LanguageSwitcher variant="icon" />
-        </div>
+        </div> */}
 
         <CardHeader>
-          <CardTitle className="text-2xl">{t("auth.registerTitle")}</CardTitle>
-          <CardDescription>{t("auth.registerDesc")}</CardDescription>
+          <CardTitle className="text-2xl">{t("auth.welcome")}</CardTitle>
+          <CardDescription>{t("auth.signUp")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -73,7 +73,7 @@ export default function Register() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="name">{t("auth.fullName")}</Label>
+              <Label htmlFor="name">{t("auth.name")}</Label>
               <Input
                 id="name"
                 name="name"
@@ -147,9 +147,9 @@ export default function Register() {
               {t("auth.haveAccount")}{" "}
               <Link
                 to="/login"
-                className="text-slate-900 font-medium hover:underline"
+                className="text-lime-700 font-bold hover:underline pointer"
               >
-                {t("common.login")}
+                {t("auth.signInHere")}
               </Link>
             </p>
           </form>
