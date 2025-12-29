@@ -158,6 +158,7 @@ export const bookParcel = async (req, res) => {
 //Customer:Get my booking
 
 export const getMyBookings = async (req, res) => {
+  console.log(req.user);
   try {
     const { status, page = 1, limit = 10 } = req.query;
     const query = { customer: req.user._id };
