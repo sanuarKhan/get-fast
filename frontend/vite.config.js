@@ -15,4 +15,12 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/api": {
+        target: import.meta.env.VITE_API_URL,
+        changeOrigin: true,
+      },
+    },
+  },
 });
