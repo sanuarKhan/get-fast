@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import authRoutes from "./routes/auth.route.js";
 import parcelRoutes from "./routes/parcel.route.js";
 import adminRoutes from "./routes/admin.route.js";
+import agentRoutes from "./routes/agent.route.js";
 const isProduction = process.env.NODE_ENV === "production";
 
 const app = express();
@@ -49,6 +50,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/parcels", parcelRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/agents", agentRoutes);
 
 //Error handler
 app.use((err, req, res, next) => {

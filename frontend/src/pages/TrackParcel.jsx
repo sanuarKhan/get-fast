@@ -6,7 +6,7 @@ import TrackingMap from "../components/TrackingMap";
 import AgentLocationUpdater from "../components/AgentLocationUpdater";
 
 const TrackingPage = () => {
-  const { parcelId } = useParams();
+  const { id } = useParams();
   const [parcel, setParcel] = useState(null);
   const [agentLocation, setAgentLocation] = useState(null);
   const [socket, setSocket] = useState(null);
@@ -15,6 +15,9 @@ const TrackingPage = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAgent = user.role === "agent";
+
+  // console.log(id, "id in tracking page");
+  const parcelId = id;
 
   useEffect(() => {
     // Initialize Socket.IO
@@ -34,7 +37,7 @@ const TrackingPage = () => {
 
   useEffect(() => {
     fetchParcelDetails();
-    fetchAgentLocation();
+    // fetchAgentLocation();
   }, [parcelId]);
 
   const fetchParcelDetails = async () => {
@@ -49,8 +52,9 @@ const TrackingPage = () => {
           },
         }
       );
-
-      setParcel(response.data.data);
+      console.log(response, " response in trackiung page");
+      console.log(response.data.parcel, "parcel in tracking page");
+      setParcel(response.data.parcel);
       setError(null);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to fetch parcel details");
@@ -59,28 +63,27 @@ const TrackingPage = () => {
       setLoading(false);
     }
   };
+  console.log(parcel, "parcel in tracking page");
 
-  const fetchAgentLocation = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/parcels/${parcelId}/agent-location`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+  // const fetchAgentLocation = async () => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     const response = await axios.get(
+  //       `${import.meta.env.VITE_API_URL}/api/agents/${parcelId}/location`,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       }
+  //     );
 
-      if (response.data.data) {
-        setAgentLocation(response.data.data);
-      }
-    } catch (err) {
-      console.error("Error fetching agent location:", err);
-    }
-  };
+  //     if (response.data.data) {
+  //       setAgentLocation(response.data.data);
+  //     }
+  //   } catch (err) {
+  //     console.error("Error fetching agent location:", err);
+  //   }
+  // };
 
   if (loading) {
     return (
@@ -118,12 +121,12 @@ const TrackingPage = () => {
     return colors[status] || "bg-gray-100 text-gray-800";
   };
 
-  const formatStatus = (status) => {
-    return status
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
+  // const formatStatus = (status) => {
+  //   return status
+  //     .split("_")
+  //     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+  //     .join(" ");
+  // };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -170,7 +173,7 @@ const TrackingPage = () => {
                       </div>
                       <div className="ml-4 flex-1">
                         <p className="font-medium text-gray-900">
-                          {formatStatus(history.status)}
+                          {history.status}
                         </p>
                         <p className="text-sm text-gray-500">
                           {new Date(history.timestamp).toLocaleString()}
@@ -200,7 +203,7 @@ const TrackingPage = () => {
                   parcel?.status
                 )}`}
               >
-                {formatStatus(parcel?.status)}
+                {parcel?.status}
               </span>
             </div>
 

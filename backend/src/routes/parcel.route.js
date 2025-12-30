@@ -29,6 +29,7 @@ router.get(
   getDashboardStats
 );
 router.get("/my-bookings", protect, restrictTo(ROLES.CUSTOMER), getMyBookings);
+
 router.get(
   "/agent/assigned",
   protect,

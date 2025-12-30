@@ -184,10 +184,12 @@ export const getMyBookings = async (req, res) => {
 
 // Get single parcel
 export const getParcel = async (req, res) => {
+  // console.log(req.params.id);
+  // console.log(req.user);
   try {
     const parcel = await Parcel.findById(req.params.id)
       .populate("customer", "name phone email")
-      .populate("agent", "name phone");
+      .populate("assignedAgent", "name phone");
 
     if (!parcel) {
       return res
@@ -199,7 +201,8 @@ export const getParcel = async (req, res) => {
     const isCustomer =
       parcel.customer._id.toString() === req.user._id.toString();
     const isAgent =
-      parcel.agent && parcel.agent._id.toString() === req.user._id.toString();
+      parcel.assignedAgent &&
+      parcel.assignedAgent._id.toString() === req.user._id.toString();
     const isAdmin = req.user.role === ROLES.ADMIN;
 
     if (!isCustomer && !isAgent && !isAdmin) {
