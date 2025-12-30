@@ -40,7 +40,6 @@ const Navbar = () => {
         ...commonItems,
         { path: "/agent", label: t("nav.parcels") },
         { path: "/agent/scan", label: t("qr.scanQR") },
-        { path: "/agent/route", label: t("agent.viewRoute") },
       ];
     }
 

@@ -6,13 +6,14 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import CustomerDashboard from "@/pages/CustomerDashboard";
 import BookParcel from "@/pages/BookParcel";
-import AgentDashboard from "@/pages/AgentDashboard";
+// import AgentDashboard from "@/pages/AgentDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import { Toaster } from "@/components/ui/sonner";
 import ScanQR from "@/pages/ScanQR";
 import TrackParcel from "@/pages/TrackParcel";
 import Navbar from "./components/Navbar";
-import "./i18n/config"; 
+import "./i18n/config";
+import AgentDashboard from "./components/AgentDashboard";
 
 function App() {
   return (

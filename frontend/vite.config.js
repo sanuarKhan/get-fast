@@ -2,25 +2,32 @@ import { fileURLToPath } from "url";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  server: {
-    proxy: {
-      "/api": {
-        target: import.meta.env.VITE_API_URL,
-        changeOrigin: true,
+export default defineConfig(({ mode }) => {
+  // Load env file based on `mode` in the current working directory.
+  const env = loadEnv(mode, process.cwd(), "");
+
+  console.log("VITE_API_URL:", env.VITE_API_URL);
+
+  return {
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
       },
     },
-  },
+    server: {
+      proxy: {
+        "/api": {
+          target: env.VITE_API_URL || "http://localhost:5000",
+          changeOrigin: true,
+        },
+      },
+    },
+  };
 });

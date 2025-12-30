@@ -8,7 +8,7 @@ import AgentLocationUpdater from "../components/AgentLocationUpdater";
 const TrackingPage = () => {
   const { id } = useParams();
   const [parcel, setParcel] = useState(null);
-  const [agentLocation, setAgentLocation] = useState(null);
+  // const [agentLocation, setAgentLocation] = useState(null);
   const [socket, setSocket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
